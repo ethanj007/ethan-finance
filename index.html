@@ -257,13 +257,15 @@ body{background:var(--paper);color:var(--ink);font-family:var(--font);min-height
     <div class="ft">Category</div>
     <div class="cgrid" id="exp-grid"></div>
     <div class="amt-wrap"><span class="amt-prefix">₹</span><input class="amt-input" type="number" id="exp-amt" placeholder="0" inputmode="decimal"></div>
-    <select class="sel" id="exp-note">
+    <select class="sel" id="exp-note" onchange="noteChange()">
       <option value="">Note — optional</option>
       <option>Lunch</option><option>Dinner</option><option>Breakfast</option><option>Snacks</option>
       <option>Auto</option><option>Bus</option><option>Metro</option><option>Petrol</option>
       <option>Groceries</option><option>Shopping</option><option>Outing</option><option>Recharge</option>
       <option>Medicine</option><option>College</option><option>Other</option>
     </select>
+    <input class="amt-wrap" type="text" id="exp-note-other" placeholder="Describe the expense..." style="display:none;width:100%;padding:13px 16px;border:2px solid var(--border);border-radius:10px;font-family:var(--font);font-size:14px;outline:none;margin-bottom:12px;background:var(--paper)" onfocus="this.style.borderColor='var(--ink)'" onblur="this.style.borderColor='var(--border)'">
+    <input type="text" id="exp-note-other" placeholder="What was it? Describe here..." style="display:none;width:100%;padding:13px 16px;border:2px solid var(--border);border-radius:10px;font-family:var(--font);font-size:14px;outline:none;margin-bottom:12px;background:var(--paper);color:var(--ink);transition:border-color .2s" onfocus="this.style.borderColor='var(--ink)'" onblur="this.style.borderColor='var(--border)'">
     <button class="btn" onclick="addExpense()">Add Expense</button>
   </div>
   <div class="stitle">This month</div>
@@ -415,11 +417,17 @@ function addExpense(){
   const a=parseFloat(document.getElementById('exp-amt').value);
   if(!selCat){toast('Pick a category first');return;}
   if(!a||a<=0){toast('Enter an amount');return;}
-  const note=document.getElementById('exp-note').value;
+  const noteSel=document.getElementById('exp-note').value;
+  const noteOther=document.getElementById('exp-note-other').value.trim();
+  const note=noteSel==='Other'?(noteOther?noteOther:'Other'):noteSel;
   entries.unshift({id:Date.now(),month:cm(),year:cy(),cat:selCat,type:'expense',amount:a,note});
   save();
   document.getElementById('exp-amt').value='';
   document.getElementById('exp-note').value='';
+  document.getElementById('exp-note-other').value='';
+  document.getElementById('exp-note-other').style.display='none';
+  document.getElementById('exp-note-other').value='';
+  document.getElementById('exp-note-other').style.display='none';
   toast('−₹'+fmt(a)+' logged');
   renderAll();
 }
@@ -792,6 +800,30 @@ function sp(name,noNav){
   if(name==='reports')renderReports();
   if(name==='invest')renderInvHero();
   if(name==='ai'){renderInsights();buildAIChips();}
+}
+
+function noteChange(){
+  const sel=document.getElementById('exp-note').value;
+  const other=document.getElementById('exp-note-other');
+  if(sel==='Other'){
+    other.style.display='block';
+    other.focus();
+  } else {
+    other.style.display='none';
+    other.value='';
+  }
+}
+
+function noteChange(){
+  const sel = document.getElementById('exp-note').value;
+  const other = document.getElementById('exp-note-other');
+  if(sel === 'Other'){
+    other.style.display = 'block';
+    other.focus();
+  } else {
+    other.style.display = 'none';
+    other.value = '';
+  }
 }
 
 document.getElementById('exp-amt').addEventListener('keydown',e=>{if(e.key==='Enter')addExpense();});

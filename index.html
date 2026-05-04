@@ -389,13 +389,72 @@ function cd(){return new Date().getDate();}
 function cmf(){return new Date().toLocaleDateString('en-IN',{month:'long'});}
 function dow(){return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];}
 
-function load(){
-  try{const d=localStorage.getItem('ef5');if(d)entries=JSON.parse(d);}catch(e){entries=[];}
+const SB_URL = 'https://unyjqqttrqifszpnjiva.supabase.co';
+const SB_KEY = 'sb_publishable_EAoUjBWGK7Wj0JV1EUaIwg_k3T0db0G';
+
+async function sbFetch(path, opts={}){
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    ...opts,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || '',
+      ...opts.headers
+    }
+  });
+  if(opts.method && opts.method !== 'GET') return res;
+  return res.json();
+}
+
+async function load(){
   try{const g=localStorage.getItem('ef5-goal');if(g)savGoal=parseInt(g)||5000;}catch(e){}
   dashYear=cy();dashMonth=cm();repYear=cy();
+  showLoading(true);
+  try{
+    const data = await sbFetch('entries?select=*&order=id.desc');
+    entries = Array.isArray(data) ? data : [];
+  }catch(e){
+    try{const d=localStorage.getItem('ef5');if(d)entries=JSON.parse(d);}catch(e2){entries=[];}
+  }
+  showLoading(false);
   renderAll();
 }
-function save(){try{localStorage.setItem('ef5',JSON.stringify(entries));}catch(e){}}
+
+function showLoading(on){
+  let el = document.getElementById('load-overlay');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'load-overlay';
+    el.style.cssText = 'position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:var(--font);font-size:14px;color:var(--muted);font-weight:600;letter-spacing:.04em';
+    el.innerHTML = '<span class="dot"></span>&nbsp; Loading your data...';
+    document.body.appendChild(el);
+  }
+  el.style.display = on ? 'flex' : 'none';
+}
+
+async function save(){
+  // localStorage backup
+  try{localStorage.setItem('ef5', JSON.stringify(entries));}catch(e){}
+}
+
+async function addToDb(entry){
+  try{
+    await sbFetch('entries', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(entry)
+    });
+  }catch(e){ console.error('DB save failed', e); }
+}
+
+async function deleteFromDb(id){
+  try{
+    await sbFetch('entries?id=eq.' + id, {
+      method: 'DELETE'
+    });
+  }catch(e){ console.error('DB delete failed', e); }
+}
 
 function banner(el){
   el.innerHTML=`<div class="month-chip">
@@ -452,8 +511,11 @@ function addIncome(cat){
   const id='inc-'+cat.replace(/\s+/g,'-');
   const a=parseFloat(document.getElementById(id).value);
   if(!a||a<=0){toast('Enter an amount');return;}
-  entries.unshift({id:Date.now(),month:cm(),year:cy(),cat,type:'income',amount:a,note:''});
-  save();document.getElementById(id).value='';
+  const entry = {id:Date.now(),month:cm(),year:cy(),cat,type:'income',amount:a,note:''};
+  entries.unshift(entry);
+  save();
+  addToDb(entry);
+  document.getElementById(id).value='';
   toast('+₹'+fmt(a)+' added');renderAll();
 }
 
@@ -501,7 +563,7 @@ function ec(e){
     <button class="edel" onclick="del(${e.id})">✕</button>
   </div>`;
 }
-function del(id){entries=entries.filter(e=>e.id!==id);save();renderAll();toast('Deleted');}
+function del(id){entries=entries.filter(e=>e.id!==id);save();deleteFromDb(id);renderAll();toast('Deleted');}
 
 // DASHBOARD
 function renderDash(){

@@ -479,8 +479,10 @@ function addExpense(){
   const noteSel=document.getElementById('exp-note').value;
   const noteOther=document.getElementById('exp-note-other').value.trim();
   const note=noteSel==='Other'?(noteOther?noteOther:'Other'):noteSel;
-  entries.unshift({id:Date.now(),month:cm(),year:cy(),cat:selCat,type:'expense',amount:a,note});
+  const expEntry={id:Date.now(),month:cm(),year:cy(),cat:selCat,type:'expense',amount:a,note};
+  entries.unshift(expEntry);
   save();
+  addToDb(expEntry);
   document.getElementById('exp-amt').value='';
   document.getElementById('exp-note').value='';
   document.getElementById('exp-note-other').value='';
